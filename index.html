@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gothic Lock Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0908;
+    --bg2:       #110f0d;
+    --bg3:       #1a1714;
+    --panel:     #141210;
+    --border:    #2e2820;
+    --border2:   #4a3e30;
+    --gold:      #c8973a;
+    --gold2:     #e8b45a;
+    --gold-dim:  #7a5a22;
+    --rust:      #8b3a2a;
+    --rust2:     #c05030;
+    --green:     #2a6b3a;
+    --green2:    #4a9b5a;
+    --text:      #d4c8b0;
+    --text2:     #8a7a62;
+    --text3:     #5a4e3e;
+    --hole-bg:   #0d0b09;
+    --hole-border:#2a2318;
+    --rod:       #c8973a;
+    --rod-glow:  rgba(200,151,58,0.4);
+    --target-bg: rgba(200,151,58,0.08);
+    --target-brd:#4a3e20;
+    --win-bg:    rgba(42,107,58,0.15);
+    --win-brd:   #2a5a3a;
+    --danger-bg: rgba(139,58,42,0.15);
+    --danger-brd:#6a2a1a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Texture overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.012) 2px, rgba(255,255,255,0.012) 4px);
+    pointer-events: none; z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* ── Header ── */
+  header { text-align: center; margin-bottom: 2.5rem; }
+  .ornament { font-size: 1.1rem; color: var(--gold-dim); letter-spacing: 0.3em; margin-bottom: 0.5rem; }
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 40px rgba(200,151,58,0.3);
+    line-height: 1.1;
+  }
+  .subtitle { font-size: 0.9rem; color: var(--text2); margin-top: 0.5rem; font-style: italic; letter-spacing: 0.1em; }
+
+  /* ── Layout ── */
+  .main-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
+  @media (max-width: 700px) { .main-layout { grid-template-columns: 1fr; } }
+
+  /* ── Panel ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 1.25rem;
+  }
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gold-dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  /* ── Lock Board ── */
+  .lock-board { display: flex; flex-direction: column; gap: 6px; }
+
+  .plate-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    transition: border-color 0.15s, background 0.15s;
+    cursor: pointer;
+  }
+  .plate-row:hover { border-color: var(--border2); background: rgba(255,255,255,0.02); }
+  .plate-row.selected { border-color: var(--gold-dim); background: rgba(200,151,58,0.04); }
+
+  .plate-num {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    color: var(--text3);
+    text-align: center;
+  }
+  .plate-row.selected .plate-num { color: var(--gold); }
+
+  .holes {
+    display: flex;
+    gap: 5px;
+  }
+
+  .hole {
+    width: 46px; height: 46px;
+    background: var(--hole-bg);
+    border: 1px solid var(--hole-border);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .hole.is-target {
+    background: var(--target-bg);
+    border-color: var(--target-brd);
+  }
+  .hole.has-rod {
+    border-color: var(--gold-dim);
+  }
+  .hole.has-rod.is-target {
+    background: var(--win-bg);
+    border-color: var(--win-brd);
+  }
+
+  /* Position index label */
+  .hole::after {
+    content: attr(data-pos);
+    position: absolute;
+    bottom: 3px; right: 4px;
+    font-size: 9px;
+    color: var(--text3);
+    font-family: 'Cinzel', serif;
+  }
+
+  /* Rod */
+  .rod-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--rod);
+    box-shadow: 0 0 10px var(--rod-glow), inset 0 1px 2px rgba(255,255,255,0.2);
+    transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .hole.has-rod.is-target .rod-dot { background: var(--green2); box-shadow: 0 0 12px rgba(74,155,90,0.5); }
+
+  .dep-tag {
+    font-size: 0.7rem;
+    color: var(--text3);
+    white-space: nowrap;
+    font-style: italic;
+  }
+  .plate-row.selected .dep-tag { color: var(--text2); }
+
+  /* ── Controls ── */
+  .controls-panel { margin-top: 1rem; }
+
+  .ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+
+  .btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    border-radius: 1px;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--gold-dim); color: var(--gold); background: rgba(200,151,58,0.05); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.3; cursor: default; }
+  .btn.primary { border-color: var(--gold-dim); color: var(--gold); }
+  .btn.primary:hover { background: rgba(200,151,58,0.1); }
+  .btn.danger { border-color: var(--rust); color: var(--rust2); }
+  .btn.success { border-color: var(--green); color: var(--green2); }
+
+  .dir-btns { display: flex; gap: 6px; }
+  .dir-btn {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  /* ── Status bar ── */
+  #statusBar {
+    margin-top: 0.75rem;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    border-left: 2px solid var(--border2);
+    color: var(--text2);
+    min-height: 36px;
+    font-style: italic;
+  }
+  #statusBar.win  { border-color: var(--green2); color: var(--green2); }
+  #statusBar.fail { border-color: var(--rust2);  color: var(--rust2); }
+  #statusBar.info { border-color: var(--gold);   color: var(--gold); }
+
+  /* ── Stats strip ── */
+  .stats-strip {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    margin-top: 0.75rem;
+  }
+  .stat-item span { color: var(--gold-dim); }
+
+  /* ── Right column ── */
+  /* Solver panel */
+  .solver-result { margin-top: 0.75rem; }
+  .solver-moves { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
+  .solver-moves::-webkit-scrollbar { width: 4px; }
+  .solver-moves::-webkit-scrollbar-track { background: var(--bg2); }
+  .solver-moves::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .smove {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-size: 0.82rem;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .smove:hover { border-color: var(--border2); color: var(--text); }
+  .smove.done { opacity: 0.35; }
+  .smove.current { border-color: var(--gold-dim); color: var(--gold); background: rgba(200,151,58,0.06); }
+  .smove .step-num { font-family: 'Cinzel', serif; font-size: 0.65rem; color: var(--text3); width: 20px; }
+  .smove .plate-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    border-radius: 1px;
+  }
+  .smove .dir-arrow { font-size: 1rem; }
+  .smove .state-preview { font-size: 0.72rem; color: var(--text3); margin-left: auto; letter-spacing: 0.05em; }
+
+  /* ── Debug panel ── */
+  .debug-section { margin-top: 1.5rem; }
+
+  .debug-toggle {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    color: var(--text3);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none; background: none;
+    padding: 0;
+    display: flex; align-items: center; gap: 6px;
+    transition: color 0.15s;
+  }
+  .debug-toggle:hover { color: var(--text2); }
+  .debug-toggle .arrow { transition: transform 0.2s; }
+  .debug-toggle.open .arrow { transform: rotate(90deg); }
+
+  .debug-body { margin-top: 0.75rem; display: none; }
+  .debug-body.open { display: block; }
+
+  #debugLog {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    color: var(--text3);
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+  #debugLog::-webkit-scrollbar { width: 4px; }
+  #debugLog::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .log-info  { color: var(--text2); }
+  .log-good  { color: var(--green2); }
+  .log-warn  { color: var(--gold); }
+  .log-err   { color: var(--rust2); }
+
+  /* Edit lock modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    padding: 1.5rem;
+    width: min(480px, 95vw);
+    border-radius: 2px;
+  }
+  .modal h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    letter-spacing: 0.1em;
+  }
+  .edit-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; }
+  .edit-row label { width: 80px; color: var(--text2); font-family: 'Cinzel', serif; font-size: 0.7rem; }
+  .edit-row input[type=number] {
+    width: 60px; padding: 4px 8px;
+    background: var(--bg); border: 1px solid var(--border2);
+    color: var(--text); font-family: inherit; font-size: 0.85rem;
+    border-radius: 1px;
+  }
+  .edit-row input:focus { outline: 1px solid var(--gold-dim); }
+  .deps-input {
+    width: 160px; padding: 4px 8px;
+    background: var(--bg); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'Courier New', monospace; font-size: 0.8rem;
+    border-radius: 1px;
+  }
+  .modal-actions { display: flex; gap: 8px; margin-top: 1rem; }
+  .modal-hint { font-size: 0.75rem; color: var(--text3); font-style: italic; margin-top: 0.5rem; }
+
+  /* Autoplay */
+  #autoplayBar {
+    display: flex; gap: 8px; align-items: center;
+    margin-top: 0.5rem;
+    font-size: 0.78rem; color: var(--text3);
+  }
+  #speedSlider { width: 80px; accent-color: var(--gold); }
+
+  /* Decorative divider */
+  .divider {
+    text-align: center;
+    margin: 1.5rem 0 1rem;
+    color: var(--text3);
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+    user-select: none;
+  }
+
+  /* ── Light mode ── */
+  body.light {
+    --bg:          #f5efe3;
+    --bg2:         #ede6d6;
+    --bg3:         #e5dcc8;
+    --panel:       #f0e8d8;
+    --border:      #c8b090;
+    --border2:     #a08060;
+    --gold:        #7a5010;
+    --gold2:       #5c3c0a;
+    --gold-dim:    #a07030;
+    --rust:        #7a2a1a;
+    --rust2:       #b04020;
+    --green:       #1a5228;
+    --green2:      #286838;
+    --text:        #1c160c;
+    --text2:       #483820;
+    --text3:       #7a6a50;
+    --hole-bg:     #e6dbc6;
+    --hole-border: #b8a078;
+    --rod:         #7a5010;
+    --rod-glow:    rgba(122,80,16,0.35);
+    --target-bg:   rgba(122,80,16,0.08);
+    --target-brd:  #9a7028;
+    --win-bg:      rgba(26,82,40,0.1);
+    --win-brd:     #286838;
+    --danger-bg:   rgba(122,42,26,0.1);
+    --danger-brd:  #7a2a1a;
+  }
+  body.light::before {
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px);
+  }
+  body.light h1 { text-shadow: 0 0 40px rgba(122,80,16,0.2); }
+  body.light .plate-row:hover  { background: rgba(0,0,0,0.03); }
+  body.light .plate-row.selected { background: rgba(122,80,16,0.06); }
+  body.light .smove.current    { background: rgba(122,80,16,0.08); }
+  body.light .btn:hover        { background: rgba(122,80,16,0.08); }
+  body.light .btn.primary:hover { background: rgba(122,80,16,0.12); }
+  body.light .hole.has-rod.is-target .rod-dot { box-shadow: 0 0 12px rgba(40,104,56,0.4); }
+
+  /* Language toggle */
+  .lang-toggle {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+  }
+  .lang-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    border-radius: 1px;
+    transition: all 0.15s;
+  }
+  .lang-btn:hover { border-color: var(--gold-dim); color: var(--gold-dim); }
+  .lang-btn.active { border-color: var(--gold-dim); color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="lang-toggle">
+    <button class="lang-btn" id="btnTheme" onclick="toggleTheme()" style="letter-spacing:0; padding:4px 8px;"></button>
+    <span style="color:var(--border2); align-self:center; font-size:0.6rem;">|</span>
+    <button class="lang-btn active" id="btnLangRu" onclick="setLang('ru')">RU</button>
+    <button class="lang-btn" id="btnLangEn" onclick="setLang('en')">EN</button>
+  </div>
+
+  <header>
+    <div class="ornament">✦ ✦ ✦</div>
+    <h1>Gothic Lock Picker</h1>
+    <div class="subtitle" data-i18n="subtitle">Решатель механических замков с A*-поиском</div>
+  </header>
+
+  <div class="main-layout">
+
+    <!-- LEFT: game board -->
+    <div>
+      <div class="panel">
+        <div class="panel-title" data-i18n="panelLock">Замок</div>
+        <div class="lock-board" id="lockBoard"></div>
+
+        <div class="controls-panel">
+          <div class="ctrl-row">
+            <button class="btn primary" onclick="UI.randomize()" data-i18n="btnRandom">⚄ Случайный</button>
+            <button class="btn" onclick="UI.openEdit()" data-i18n="btnEdit">✎ Редактировать</button>
+            <button class="btn" onclick="UI.reset()" data-i18n="btnReset">↺ Сбросить</button>
+          </div>
+          <div class="ctrl-row dir-btns">
+            <button class="btn dir-btn" id="btnLeft"  onclick="UI.move(-1)">←</button>
+            <button class="btn dir-btn" id="btnRight" onclick="UI.move(1)">→</button>
+            <div style="flex:1"></div>
+            <div style="font-size:0.75rem; color:var(--text3); align-self:center; font-style:italic;" data-i18n="keyHint">
+              Клавиши: ← → ход, ↑↓ пластина
+            </div>
+          </div>
+        </div>
+
+        <div id="statusBar"></div>
+
+        <div class="stats-strip">
+          <div class="stat-item"><span data-i18n="statMoves">Ходов:</span> <span id="statMoves">0</span></div>
+          <div class="stat-item"><span data-i18n="statDist">Расст. до цели:</span> <span id="statDist">—</span></div>
+          <div class="stat-item"><span data-i18n="statPlate">Пластина:</span> <span id="statSel">—</span></div>
+        </div>
+      </div>
+
+      <!-- Debug panel -->
+      <div class="debug-section">
+        <button class="debug-toggle" id="debugToggle" onclick="UI.toggleDebug()">
+          <span class="arrow">▶</span> <span data-i18n="debugTitle">Консоль отладки</span>
+        </button>
+        <div class="debug-body" id="debugBody">
+          <div id="debugLog"></div>
+          <div style="margin-top:6px; display:flex; gap:6px;">
+            <button class="btn" style="font-size:0.65rem; padding:4px 10px;" onclick="UI.clearLog()" data-i18n="btnClear">Очистить</button>
+            <button class="btn" style="font-size:0.65rem; padding:4px 10px;" onclick="UI.dumpState()" data-i18n="btnDump">Дамп состояния</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: solver -->
+    <div>
+      <div class="panel">
+        <div class="panel-title" data-i18n="panelSolver">Решатель</div>
+
+        <button class="btn primary" style="width:100%; margin-bottom:8px;" onclick="UI.runSolver()" data-i18n="btnSolve">
+          ◈ Найти решение
+        </button>
+
+        <div id="solverStatus" style="font-size:0.8rem; color:var(--text3); font-style:italic; margin-bottom:0.5rem; min-height:18px;"></div>
+
+        <div id="autoplayBar" style="display:none;">
+          <button class="btn success" id="btnAutoplay" onclick="UI.toggleAutoplay()">▶ Авто</button>
+          <button class="btn" onclick="UI.stepForward()" data-i18n="btnStep">▷ Шаг</button>
+          <button class="btn" onclick="UI.stepBack()" data-i18n="btnBack">◁ Назад</button>
+          <input type="range" id="speedSlider" min="100" max="1500" value="600" step="100">
+          <span id="speedLabel" style="font-size:0.7rem; width:40px;"></span>
+        </div>
+
+        <div class="solver-result">
+          <div class="solver-moves" id="solverMoves"></div>
+        </div>
+      </div>
+
+      <div class="divider">· · ·</div>
+
+      <div class="panel" style="font-size:0.8rem; color:var(--text3);">
+        <div class="panel-title" data-i18n="panelHelp">Справка</div>
+        <p style="margin-bottom:6px;" data-i18n-html="helpText1">Стержень должен попасть в <strong style="color:var(--gold)">4-е отверстие</strong> (позиция 4) каждой пластины.</p>
+        <p style="margin-bottom:6px;" data-i18n="helpText2">Пластина движется свободно в обе стороны — только края замка ограничивают движение.</p>
+        <p data-i18n-html="helpText3">Пластина может <em style="color:var(--text2)">тянуть за собой</em> другие пластины при движении.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Edit modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2 data-i18n="editTitle">✎ Редактировать замок</h2>
+    <div id="editRows"></div>
+    <p class="modal-hint" data-i18n="editHint">Позиции: 1–7. Зависимости через запятую: «2» — тянет в ту же сторону, «2-» — тянет в противоположную. Пусто — нет зависимостей.</p>
+    <div class="modal-actions">
+      <button class="btn primary" onclick="UI.applyEdit()" data-i18n="btnApply">Применить</button>
+      <button class="btn" onclick="UI.closeEdit()" data-i18n="btnCancel">Отмена</button>
+      <button class="btn" style="margin-left:auto;" onclick="UI.addPlate()" data-i18n="btnAddPlate">+ Пластина</button>
+      <button class="btn danger" onclick="UI.removePlate()" data-i18n="btnRemovePlate">− Пластина</button>
+    </div>
+  </div>
+</div>
+
+<script src="solver.js"></script>
+<script src="debug.js"></script>
+<script>
+// ── Theme ────────────────────────────────────────────────
+let currentTheme = localStorage.getItem('glp-theme') || 'dark';
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.body.classList.toggle('light', theme === 'light');
+  document.getElementById('btnTheme').textContent = theme === 'dark' ? '☀' : '🌙';
+  localStorage.setItem('glp-theme', theme);
+}
+function toggleTheme() {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
+// ── Translations ────────────────────────────────────────
+const TRANSLATIONS = {
+  ru: {
+    subtitle: 'Решатель механических замков с A*-поиском',
+    panelLock: 'Замок', panelSolver: 'Решатель', panelHelp: 'Справка',
+    btnRandom: '⚄ Случайный', btnEdit: '✎ Редактировать', btnReset: '↺ Сбросить',
+    btnSolve: '◈ Найти решение', btnAuto: '▶ Авто', btnPause: '⏸ Пауза',
+    btnStep: '▷ Шаг', btnBack: '◁ Назад',
+    btnClear: 'Очистить', btnDump: 'Дамп состояния',
+    btnApply: 'Применить', btnCancel: 'Отмена',
+    btnAddPlate: '+ Пластина', btnRemovePlate: '− Пластина',
+    keyHint: 'Клавиши: ← → ход, ↑↓ пластина',
+    statMoves: 'Ходов:', statDist: 'Расст. до цели:', statPlate: 'Пластина:',
+    debugTitle: 'Консоль отладки',
+    helpText1: 'Стержень должен попасть в <strong style="color:var(--gold)">4-е отверстие</strong> (позиция 4) каждой пластины.',
+    helpText2: 'Пластина движется свободно в обе стороны — только края замка ограничивают движение.',
+    helpText3: 'Пластина может <em style="color:var(--text2)">тянуть за собой</em> другие пластины при движении.',
+    editTitle: '✎ Редактировать замок',
+    editLabelPos: 'поз.', editLabelDrags: 'тянет',
+    editHint: 'Позиции: 1–7. Зависимости через запятую: «2» — тянет в ту же сторону, «2-» — тянет в противоположную. Пусто — нет зависимостей.',
+    maxPlates: 'Максимум 9 пластин', minPlates: 'Минимум 2 пластины',
+    posOutOfRange: n => `Позиция #${n} вне диапазона 1–7`,
+    statusInit: 'Выберите пластину — нажмите на строку.',
+    statusNew: 'Новый замок. Выберите пластину.',
+    statusReset: 'Замок сброшен.', statusUpdated: 'Замок обновлён.',
+    statusDepBlocked: 'Невозможный ход: зависимая пластина упирается в край.',
+    statusEdgeBlocked: 'Невозможный ход: край замка.',
+    statusMove: (n, d) => `Ход: пластина #${n} ${d}`,
+    statusStep: (cur, tot, n, d) => `Шаг ${cur}/${tot}: пластина #${n} ${d}`,
+    statusRollback: n => `Откат к шагу ${n}`,
+    statusWin: n => `Замок вскрыт! Ходов: ${n}`,
+    solverAlready: 'Уже решён!',
+    solverFound: (s, e, ms) => `Найдено! Шагов: ${s} | Просмотрено: ${e} | ${ms}мс`,
+    solverFail: r => 'Решение не найдено: ' + r,
+    dirLeft: 'влево', dirRight: 'вправо', ms: 'мс',
+    logInit: 'Gothic Lock Picker инициализирован',
+    logNewLock: (pos, n) => `Новый замок: [${pos}] | Пластин: ${n}`,
+    logNewLockDeps: deps => `deps: ${deps}`,
+    logChanged: pos => `Замок изменён вручную: [${pos}]`,
+    logReset: 'Замок сброшен к начальному состоянию.',
+    logMoveImpossible: r => `Ход невозможен (${r})`,
+    logMove: (n, plateN, d, before, after) => `Ход ${n}: пластина #${plateN} ${d} | [${before}] → [${after}]`,
+    logAutoStep: (n, plateN, d, after) => `Авто-шаг ${n}: #${plateN} ${d} → [${after}]`,
+    logRollback: n => `Откат шага ${n}`,
+    logWin: n => `ЗАМОК ВСКРЫТ за ${n} ходов`,
+    logSolverStart: 'Запуск решателя...',
+    logSolverOk: (s, e, ms) => `Решение: ${s} шагов, просмотрено ${e} состояний за ${ms}мс`,
+    logSolverFail: r => 'Решение не найдено — ' + r,
+    dumpHeader: '--- ДАМП СОСТОЯНИЯ ---', dumpFooter: '--- КОНЕЦ ДАМПА ---',
+    dumpPos: pos => `Позиции: [${pos}]`, dumpInit: pos => `Начало:  [${pos}]`,
+    dumpDeps: d => `Зависимости: ${d}`,
+    dumpMoves: (n, over) => `Ходов: ${n} | Игра окончена: ${over}`,
+    dumpSolver: (s, step) => `Решатель: ${s} шагов, шаг=${step}`,
+  },
+  en: {
+    subtitle: 'Mechanical lock puzzle with A* solver',
+    panelLock: 'Lock', panelSolver: 'Solver', panelHelp: 'Help',
+    btnRandom: '⚄ Random', btnEdit: '✎ Edit', btnReset: '↺ Reset',
+    btnSolve: '◈ Find solution', btnAuto: '▶ Auto', btnPause: '⏸ Pause',
+    btnStep: '▷ Step', btnBack: '◁ Back',
+    btnClear: 'Clear', btnDump: 'Dump state',
+    btnApply: 'Apply', btnCancel: 'Cancel',
+    btnAddPlate: '+ Plate', btnRemovePlate: '− Plate',
+    keyHint: 'Keys: ← → move, ↑↓ select plate',
+    statMoves: 'Moves:', statDist: 'Dist. to goal:', statPlate: 'Plate:',
+    debugTitle: 'Debug console',
+    helpText1: 'The rod must reach the <strong style="color:var(--gold)">4th hole</strong> (position 4) on every plate.',
+    helpText2: 'Plates move freely in both directions — only the edges limit movement.',
+    helpText3: 'A plate may <em style="color:var(--text2)">drag</em> other plates when it moves.',
+    editTitle: '✎ Edit lock',
+    editLabelPos: 'pos.', editLabelDrags: 'drags',
+    editHint: 'Positions: 1–7. Dependencies (comma-separated): «2» — same direction, «2-» — opposite. Empty — no deps.',
+    maxPlates: 'Maximum 9 plates', minPlates: 'Minimum 2 plates',
+    posOutOfRange: n => `Position #${n} out of range 1–7`,
+    statusInit: 'Select a plate — click on a row.',
+    statusNew: 'New lock. Select a plate.',
+    statusReset: 'Lock reset.', statusUpdated: 'Lock updated.',
+    statusDepBlocked: 'Invalid move: a dependent plate is at the edge.',
+    statusEdgeBlocked: 'Invalid move: edge of lock.',
+    statusMove: (n, d) => `Move: plate #${n} ${d}`,
+    statusStep: (cur, tot, n, d) => `Step ${cur}/${tot}: plate #${n} ${d}`,
+    statusRollback: n => `Rolled back to step ${n}`,
+    statusWin: n => `Lock cracked! Moves: ${n}`,
+    solverAlready: 'Already solved!',
+    solverFound: (s, e, ms) => `Found! Steps: ${s} | Explored: ${e} | ${ms}ms`,
+    solverFail: r => 'No solution: ' + r,
+    dirLeft: 'left', dirRight: 'right', ms: 'ms',
+    logInit: 'Gothic Lock Picker initialized',
+    logNewLock: (pos, n) => `New lock: [${pos}] | Plates: ${n}`,
+    logNewLockDeps: deps => `deps: ${deps}`,
+    logChanged: pos => `Lock edited manually: [${pos}]`,
+    logReset: 'Lock reset to initial state.',
+    logMoveImpossible: r => `Move impossible (${r})`,
+    logMove: (n, plateN, d, before, after) => `Move ${n}: plate #${plateN} ${d} | [${before}] → [${after}]`,
+    logAutoStep: (n, plateN, d, after) => `Auto step ${n}: #${plateN} ${d} → [${after}]`,
+    logRollback: n => `Rolled back step ${n}`,
+    logWin: n => `LOCK CRACKED in ${n} moves`,
+    logSolverStart: 'Running solver...',
+    logSolverOk: (s, e, ms) => `Solution: ${s} steps, explored ${e} states in ${ms}ms`,
+    logSolverFail: r => 'No solution found — ' + r,
+    dumpHeader: '--- STATE DUMP ---', dumpFooter: '--- END DUMP ---',
+    dumpPos: pos => `Positions: [${pos}]`, dumpInit: pos => `Initial:  [${pos}]`,
+    dumpDeps: d => `Dependencies: ${d}`,
+    dumpMoves: (n, over) => `Moves: ${n} | Game over: ${over}`,
+    dumpSolver: (s, step) => `Solver: ${s} steps, step=${step}`,
+  }
+};
+
+let currentLang = 'ru';
+function t(key, ...args) {
+  const val = TRANSLATIONS[currentLang][key];
+  return typeof val === 'function' ? val(...args) : (val ?? key);
+}
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.getElementById('btnAutoplay').textContent = isAutoplaying ? t('btnPause') : t('btnAuto');
+  const sl = document.getElementById('speedSlider');
+  document.getElementById('speedLabel').textContent = sl.value + t('ms');
+}
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btnLangRu').classList.toggle('active', lang === 'ru');
+  document.getElementById('btnLangEn').classList.toggle('active', lang === 'en');
+  applyLang();
+  render();
+  renderSolverMoves();
+}
+
+// ── Game state ──────────────────────────────────────────
+const { createLock, randomLock, applyMove, legalMoves, solve, distanceToGoal, TARGET, HOLES } = LockSolver;
+
+let lock = randomLock(5);
+let currentState = [...lock.positions];
+let initialState = [...lock.positions];
+let selectedPlate = 0;
+let moveCount = 0;
+let gameOver = false;
+
+// Solver state
+let solverPath = null;
+let solverStep = 0;
+let autoplayTimer = null;
+let isAutoplaying = false;
+
+// ── Logging ─────────────────────────────────────────────
+function log(msg, type = 'info') {
+  if (!DEBUG_ENABLED) return;
+  const el = document.getElementById('debugLog');
+  const line = document.createElement('div');
+  line.className = 'log-' + type;
+  const ts = new Date().toLocaleTimeString('ru-RU', { hour12: false });
+  line.textContent = `[${ts}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Render ───────────────────────────────────────────────
+function render() {
+  const board = document.getElementById('lockBoard');
+  board.innerHTML = '';
+
+  for (let i = 0; i < lock.n; i++) {
+    const pos = currentState[i];
+    const isSelected = i === selectedPlate;
+
+    const row = document.createElement('div');
+    row.className = 'plate-row' + (isSelected ? ' selected' : '');
+    row.onclick = () => { selectedPlate = i; render(); };
+
+    // Number
+    const numEl = document.createElement('div');
+    numEl.className = 'plate-num';
+    numEl.textContent = '#' + (i + 1);
+    row.appendChild(numEl);
+
+    // Holes
+    const holesEl = document.createElement('div');
+    holesEl.className = 'holes';
+    for (let h = 0; h < HOLES; h++) {
+      const hole = document.createElement('div');
+      hole.className = 'hole';
+      hole.setAttribute('data-pos', h + 1);
+      if (h === TARGET) hole.classList.add('is-target');
+      if (h === pos)    hole.classList.add('has-rod');
+
+      if (h === pos) {
+        const dot = document.createElement('div');
+        dot.className = 'rod-dot';
+        hole.appendChild(dot);
+      }
+      holesEl.appendChild(hole);
+    }
+    row.appendChild(holesEl);
+
+    // Dep tag
+    const depEl = document.createElement('div');
+    depEl.className = 'dep-tag';
+    const deps = lock.deps[i];
+    depEl.textContent = deps.length ? deps.map(d => (d.rev ? '←' : '→') + '#' + (d.idx + 1)).join(' ') : '';
+    row.appendChild(depEl);
+
+    board.appendChild(row);
+  }
+
+  // Stats
+  document.getElementById('statMoves').textContent = moveCount;
+  document.getElementById('statDist').textContent = distanceToGoal(currentState);
+  document.getElementById('statSel').textContent = '#' + (selectedPlate + 1);
+
+  // Check win
+  if (currentState.every(p => p === TARGET) && !gameOver) {
+    gameOver = true;
+    setStatus(t('statusWin', moveCount), 'win');
+    log(t('logWin', moveCount), 'good');
+    stopAutoplay();
+  }
+}
+
+function setStatus(msg, type = '') {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  el.className = type;
+}
+
+// ── Solver move list render ──────────────────────────────
+function renderSolverMoves() {
+  const container = document.getElementById('solverMoves');
+  container.innerHTML = '';
+  if (!solverPath) return;
+
+  solverPath.forEach((mv, idx) => {
+    const el = document.createElement('div');
+    el.className = 'smove';
+    if (idx < solverStep) el.classList.add('done');
+    if (idx === solverStep) el.classList.add('current');
+
+    el.innerHTML = `
+      <span class="step-num">${idx + 1}</span>
+      <span class="plate-badge">#${mv.plateIdx + 1}</span>
+      <span class="dir-arrow">${mv.dir === -1 ? '←' : '→'}</span>
+      <span style="font-size:0.78rem; color:var(--text2);">${mv.dir === -1 ? t('dirLeft') : t('dirRight')}</span>
+      <span class="state-preview">[${mv.stateAfter.map(p => p + 1).join('·')}]</span>
+    `;
+    el.onclick = () => jumpToStep(idx);
+    container.appendChild(el);
+  });
+
+  // Scroll current into view
+  const items = container.querySelectorAll('.smove');
+  if (items[solverStep]) items[solverStep].scrollIntoView({ block: 'nearest' });
+}
+
+// ── UI object ────────────────────────────────────────────
+const UI = {
+  move(dir) {
+    if (gameOver) return;
+    const result = applyMove(currentState, selectedPlate, dir, lock.deps);
+    if (!result.ok) {
+      setStatus(result.reason === 'dep_blocked' ? t('statusDepBlocked') : t('statusEdgeBlocked'), '');
+      log(t('logMoveImpossible', result.reason), 'warn');
+      return;
+    }
+    const prevState = [...currentState];
+    currentState = result.state;
+    moveCount++;
+    const dirSym = dir === -1 ? '←' : '→';
+    log(t('logMove', moveCount, selectedPlate+1, dirSym, prevState.map(p=>p+1).join('·'), currentState.map(p=>p+1).join('·')));
+    setStatus(t('statusMove', selectedPlate+1, dirSym));
+    render();
+  },
+
+  randomize() {
+    stopAutoplay();
+    lock = randomLock(5);
+    currentState = [...lock.positions];
+    initialState = [...lock.positions];
+    selectedPlate = 0;
+    moveCount = 0;
+    gameOver = false;
+    solverPath = null;
+    solverStep = 0;
+    document.getElementById('solverMoves').innerHTML = '';
+    document.getElementById('solverStatus').textContent = '';
+    document.getElementById('autoplayBar').style.display = 'none';
+    setStatus(t('statusNew'), '');
+    const depsStr = lock.deps.map((d,i)=> d.length ? '#'+(i+1)+': '+d.map(e=>(e.rev?'←':'→')+'#'+(e.idx+1)).join(' ') : '').filter(Boolean).join('; ');
+    log(t('logNewLock', lock.positions.map(p=>p+1).join('·'), lock.n), 'info');
+    if (depsStr) log(t('logNewLockDeps', depsStr), 'info');
+    render();
+  },
+
+  reset() {
+    stopAutoplay();
+    currentState = [...initialState];
+    moveCount = 0;
+    gameOver = false;
+    solverStep = 0;
+    setStatus(t('statusReset'), '');
+    log(t('logReset'));
+    render();
+    renderSolverMoves();
+  },
+
+  runSolver() {
+    stopAutoplay();
+    const startTime = performance.now();
+    log(t('logSolverStart'), 'info');
+
+    const solverLock = createLock(currentState, lock.deps);
+    const result = solve(solverLock);
+    const elapsed = (performance.now() - startTime).toFixed(1);
+
+    const statusEl = document.getElementById('solverStatus');
+
+    if (result.solved) {
+      solverPath = result.path;
+      solverStep = 0;
+      if (result.alreadySolved) {
+        statusEl.textContent = t('solverAlready');
+        log(t('solverAlready'), 'good');
+        return;
+      }
+      statusEl.textContent = t('solverFound', solverPath.length, result.explored, elapsed);
+      log(t('logSolverOk', solverPath.length, result.explored, elapsed), 'good');
+      document.getElementById('autoplayBar').style.display = 'flex';
+      renderSolverMoves();
+    } else {
+      solverPath = null;
+      statusEl.textContent = t('solverFail', result.reason);
+      log(t('logSolverFail', result.reason), 'err');
+      document.getElementById('autoplayBar').style.display = 'none';
+      document.getElementById('solverMoves').innerHTML = '';
+    }
+  },
+
+  stepForward() {
+    if (!solverPath || solverStep >= solverPath.length) return;
+    const mv = solverPath[solverStep];
+    currentState = [...mv.stateAfter];
+    selectedPlate = mv.plateIdx;
+    moveCount++;
+    solverStep++;
+    const sd = mv.dir === -1 ? '←' : '→';
+    log(t('logAutoStep', solverStep, mv.plateIdx+1, sd, mv.stateAfter.map(p=>p+1).join('·')));
+    setStatus(t('statusStep', solverStep, solverPath.length, mv.plateIdx+1, sd));
+    render();
+    renderSolverMoves();
+  },
+
+  stepBack() {
+    if (!solverPath || solverStep <= 0) return;
+    solverStep--;
+    const mv = solverPath[solverStep];
+    currentState = [...mv.stateBefore];
+    selectedPlate = mv.plateIdx;
+    if (moveCount > 0) moveCount--;
+    gameOver = false;
+    log(t('logRollback', solverStep + 1));
+    setStatus(t('statusRollback', solverStep));
+    render();
+    renderSolverMoves();
+  },
+
+  toggleAutoplay() {
+    if (isAutoplaying) stopAutoplay();
+    else startAutoplay();
+  },
+
+  toggleDebug() {
+    if (!DEBUG_ENABLED) return;
+    const btn = document.getElementById('debugToggle');
+    const body = document.getElementById('debugBody');
+    btn.classList.toggle('open');
+    body.classList.toggle('open');
+  },
+
+  clearLog() {
+    if (!DEBUG_ENABLED) return;
+    document.getElementById('debugLog').innerHTML = '';
+  },
+
+  dumpState() {
+    if (!DEBUG_ENABLED) return;
+    log(t('dumpHeader'), 'warn');
+    log(t('dumpPos', currentState.map(p=>p+1).join(', ')), 'info');
+    log(t('dumpInit', initialState.map(p=>p+1).join(', ')), 'info');
+    log(t('dumpDeps', lock.deps.map((d,i)=> '#'+(i+1)+'['+d.map(e=>(e.rev?'←':'→')+'#'+(e.idx+1)).join(',')+']').join(' | ')), 'info');
+    log(t('dumpMoves', moveCount, gameOver), 'info');
+    if (solverPath) log(t('dumpSolver', solverPath.length, solverStep), 'info');
+    log(t('dumpFooter'), 'warn');
+    if (!document.getElementById('debugBody').classList.contains('open')) UI.toggleDebug();
+  },
+
+  // ── Edit modal ──
+  openEdit() {
+    const container = document.getElementById('editRows');
+    container.innerHTML = '';
+    for (let i = 0; i < lock.n; i++) {
+      const row = document.createElement('div');
+      row.className = 'edit-row';
+      row.innerHTML = `
+        <label>#${i+1} ${t('editLabelPos')}</label>
+        <input type="number" min="1" max="7" value="${initialState[i]+1}" id="epos_${i}">
+        <label style="margin-left:8px;">${t('editLabelDrags')}</label>
+        <input class="deps-input" type="text" value="${lock.deps[i].map(d => (d.idx+1) + (d.rev ? '-' : '')).join(',')}" id="edep_${i}" placeholder="2,4-">
+      `;
+      container.appendChild(row);
+    }
+    document.getElementById('editModal').classList.add('open');
+  },
+
+  closeEdit() { document.getElementById('editModal').classList.remove('open'); },
+
+  applyEdit() {
+    const n = lock.n;
+    const newPos = [], newDeps = [];
+    for (let i = 0; i < n; i++) {
+      const p = parseInt(document.getElementById('epos_' + i).value);
+      if (isNaN(p) || p < 1 || p > 7) { alert(t('posOutOfRange', i+1)); return; }
+      newPos.push(p - 1);
+      const depStr = document.getElementById('edep_' + i).value.trim();
+      if (depStr) {
+        const deps = depStr.split(',').flatMap(s => {
+          s = s.trim();
+          const rev = s.endsWith('-');
+          const idx = parseInt(s.replace(/[-+]$/, '')) - 1;
+          if (isNaN(idx) || idx < 0 || idx >= n || idx === i) return [];
+          return [{ idx, rev }];
+        });
+        newDeps.push(deps);
+      } else {
+        newDeps.push([]);
+      }
+    }
+    lock = createLock(newPos, newDeps);
+    currentState = [...newPos];
+    initialState = [...newPos];
+    moveCount = 0; gameOver = false;
+    solverPath = null; solverStep = 0;
+    document.getElementById('solverMoves').innerHTML = '';
+    document.getElementById('solverStatus').textContent = '';
+    document.getElementById('autoplayBar').style.display = 'none';
+    this.closeEdit();
+    log(t('logChanged', newPos.map(p=>p+1).join('·')), 'warn');
+    setStatus(t('statusUpdated'));
+    render();
+  },
+
+  addPlate() {
+    if (lock.n >= 9) { alert(t('maxPlates')); return; }
+    const newPos = [...currentState, 0];
+    const newDeps = [...lock.deps, []];
+    lock = createLock(newPos, newDeps);
+    currentState = [...newPos];
+    initialState = [...newPos];
+    this.openEdit();
+  },
+
+  removePlate() {
+    if (lock.n <= 2) { alert(t('minPlates')); return; }
+    const newPos = currentState.slice(0, -1);
+    const newDeps = lock.deps.slice(0, -1).map(d => d.filter(e => e.idx < newPos.length));
+    lock = createLock(newPos, newDeps);
+    currentState = [...newPos];
+    initialState = [...newPos];
+    this.openEdit();
+  }
+};
+
+// ── Autoplay helpers ─────────────────────────────────────
+function startAutoplay() {
+  if (!solverPath || solverStep >= solverPath.length) return;
+  isAutoplaying = true;
+  document.getElementById('btnAutoplay').textContent = t('btnPause');
+  scheduleNext();
+}
+
+function scheduleNext() {
+  if (!isAutoplaying) return;
+  const speed = parseInt(document.getElementById('speedSlider').value);
+  autoplayTimer = setTimeout(() => {
+    UI.stepForward();
+    if (solverStep < solverPath.length && !gameOver) scheduleNext();
+    else stopAutoplay();
+  }, speed);
+}
+
+function stopAutoplay() {
+  isAutoplaying = false;
+  clearTimeout(autoplayTimer);
+  const btn = document.getElementById('btnAutoplay');
+  if (btn) btn.textContent = t('btnAuto');
+}
+
+document.getElementById('speedSlider').addEventListener('input', function() {
+  document.getElementById('speedLabel').textContent = this.value + t('ms');
+});
+
+// ── Keyboard ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (document.getElementById('editModal').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); UI.move(-1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); UI.move(1); }
+  if (e.key === 'ArrowUp')    { e.preventDefault(); selectedPlate = Math.max(0, selectedPlate - 1); render(); }
+  if (e.key === 'ArrowDown')  { e.preventDefault(); selectedPlate = Math.min(lock.n - 1, selectedPlate + 1); render(); }
+});
+
+// ── Init ─────────────────────────────────────────────────
+applyTheme(currentTheme);
+if (!DEBUG_ENABLED) {
+  document.querySelector('.debug-section').remove();
+}
+applyLang();
+setStatus(t('statusInit'));
+log(t('logInit'), 'good');
+log(t('logNewLock', lock.positions.map(p=>p+1).join('·'), lock.n), 'info');
+render();
+</script>
+</body>
+</html>
